@@ -36,35 +36,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-
-
-
-// export default function RootLayout({ children }: { children: React.ReactNode }) {
-//   return (
-//     <html lang="en">
-//       <body>
-//         <TanstackProvider>
-//           {children}
-//           <ToasterComponent />
-//         </TanstackProvider>
-//       </body>
-//     </html>
-//   );
-// }
-
-
-// export default function RootLayout({ children }: { children: React.ReactNode }) {
-//   return (
-//     <html lang="en">
-//       <body>
-//         <TanstackProvider>
-//           {children}
-//           <ToasterComponent />
-//         </TanstackProvider>
-//       </body>
-//     </html>
-//   );
-// }
-
-

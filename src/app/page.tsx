@@ -1,110 +1,3 @@
-// 'use client';
-
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { z } from 'zod';
-// import { formSchema } from '@/lib/schema';
-// import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-// import { Input } from '@/components/ui/input';
-// import { Button } from '@/components/ui/button';
-// import {
-//   Form,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormControl,
-//   FormMessage,
-// } from '@/components/ui/form';
-
-// import { getUsers, postFormData } from '@/lib/api'; //
-
-// type FormValues = z.infer<typeof formSchema>;
-
-// export default function Page() {
-//   const queryClient = useQueryClient();
-
-//   const form = useForm<FormValues>({
-//     resolver: zodResolver(formSchema),
-//     defaultValues: {
-//       name: '',
-//       email: '',
-//     },
-//   });
-
-//   const mutation = useMutation({
-//     mutationFn: postFormData,
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ['users'] });
-//       form.reset();
-//       alert('Form submitted successfully');
-//     },
-//   });
-
-//   const { data: users, isLoading } = useQuery({
-//     queryKey: ['users'],
-//     queryFn: getUsers,
-//   });
-
-//   const onSubmit = (values: FormValues) => {
-//     mutation.mutate(values);
-//   };
-
-//   return (
-//     <div className="max-w-md mx-auto mt-10">
-//       <Form {...form}>
-//         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-//           <FormField
-//             control={form.control}
-//             name="name"
-//             render={({ field }) => (
-//               <FormItem>
-//                 <FormLabel>Name</FormLabel>
-//                 <FormControl>
-//                   <Input placeholder="Your Name" {...field} />
-//                 </FormControl>
-//                 <FormMessage />
-//               </FormItem>
-//             )}
-//           />
-//           <FormField
-//             control={form.control}
-//             name="email"
-//             render={({ field }) => (
-//               <FormItem>
-//                 <FormLabel>Email</FormLabel>
-//                 <FormControl>
-//                   <Input placeholder="email@example.com" {...field} />
-//                 </FormControl>
-//                 <FormMessage />
-//               </FormItem>
-//             )}
-//           />
-//           <Button type="submit" disabled={mutation.isPending}>
-//             {mutation.isPending ? 'Submitting...' : 'Submit'}
-//           </Button>
-//         </form>
-//       </Form>
-
-//       <div className="mt-8">
-//         <h2 className="text-xl font-semibold">Sample Users</h2>
-//         {isLoading ? (
-//           <p>Loading...</p>
-//         ) : (
-//           <ul className="list-disc list-inside mt-2">
-//             {users?.slice(0, 5).map((user: any) => (
-//               <li key={user.id}>
-//                 {user.name} - {user.email}
-//               </li>
-//             ))}
-//           </ul>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-
 "use client";
 
 import { useState } from "react";
@@ -113,11 +6,9 @@ import { getUsers, addUser, updateUser, deleteUser } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import {
   Form,
   FormField,
@@ -126,6 +17,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type User = {
   id: string;
@@ -133,7 +32,6 @@ type User = {
   email: string;
 };
 
-// Zod schema
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -144,26 +42,25 @@ type FormData = z.infer<typeof formSchema>;
 export default function HomePage() {
   const queryClient = useQueryClient();
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  // Fetch users
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: getUsers,
   });
 
-  // Form
-  const formMethods = useForm<FormData>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", email: "" },
   });
 
-  // Mutations
   const addMutation = useMutation({
     mutationFn: addUser,
     onSuccess: () => {
       toast.success("User added!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      formMethods.reset();
+      form.reset({ name: "", email: "" }); // explicitly reset
     },
     onError: () => toast.error("Failed to add user"),
   });
@@ -173,8 +70,8 @@ export default function HomePage() {
     onSuccess: () => {
       toast.success("User updated!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      formMethods.reset();
       setEditId(null);
+      form.reset({ name: "", email: "" }); // ✅ explicit blank reset
     },
     onError: () => toast.error("Failed to update user"),
   });
@@ -184,6 +81,8 @@ export default function HomePage() {
     onSuccess: () => {
       toast.success("User deleted!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeleteId(null);
+      setShowConfirm(false);
     },
     onError: () => toast.error("Failed to delete user"),
   });
@@ -197,20 +96,25 @@ export default function HomePage() {
   };
 
   const handleEdit = (user: User) => {
-    formMethods.reset({ name: user.name, email: user.email });
+    form.reset({ name: user.name, email: user.email });
     setEditId(user.id);
+  };
+
+  const confirmDelete = (id: string) => {
+    setDeleteId(id);
+    setShowConfirm(true);
   };
 
   return (
     <main className="max-w-xl mx-auto p-6 space-y-6">
       {/* Form */}
-      <Form {...formMethods}>
+      <Form {...form}>
         <form
-          onSubmit={formMethods.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-4"
         >
           <FormField
-            control={formMethods.control}
+            control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
@@ -224,7 +128,7 @@ export default function HomePage() {
           />
 
           <FormField
-            control={formMethods.control}
+            control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
@@ -237,8 +141,18 @@ export default function HomePage() {
             )}
           />
 
-          <Button type="submit" className="w-full">
-            {editId ? "Update User" : "Add User"}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={addMutation.isPending || updateMutation.isPending}
+          >
+            {editId
+              ? updateMutation.isPending
+                ? "Updating..."
+                : "Update User"
+              : addMutation.isPending
+              ? "Adding..."
+              : "Add User"}
           </Button>
         </form>
       </Form>
@@ -263,13 +177,35 @@ export default function HomePage() {
                 <Button size="sm" onClick={() => handleEdit(user)}>
                   Edit
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => deleteMutation.mutate(user.id)}
-                >
-                  Delete
-                </Button>
+                <Dialog open={showConfirm && deleteId === user.id} onOpenChange={setShowConfirm}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => confirmDelete(user.id)}
+                    >
+                      Delete
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete User</DialogTitle>
+                      <p>Are you sure you want to delete this user?</p>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="ghost" onClick={() => setShowConfirm(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => deleteMutation.mutate(deleteId!)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? "Deleting..." : "Confirm"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           ))
@@ -278,7 +214,6 @@ export default function HomePage() {
     </main>
   );
 }
-
 
 
 
