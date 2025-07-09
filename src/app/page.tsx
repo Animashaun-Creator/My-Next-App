@@ -60,7 +60,7 @@ export default function HomePage() {
     onSuccess: () => {
       toast.success("User added!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      form.reset({ name: "", email: "" }); // explicitly reset
+      form.reset({ name: "", email: "" }); 
     },
     onError: () => toast.error("Failed to add user"),
   });
@@ -71,7 +71,7 @@ export default function HomePage() {
       toast.success("User updated!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditId(null);
-      form.reset({ name: "", email: "" }); // ✅ explicit blank reset
+      form.reset({ name: "", email: "" });
     },
     onError: () => toast.error("Failed to update user"),
   });
